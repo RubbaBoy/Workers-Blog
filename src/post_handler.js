@@ -17,7 +17,6 @@ class ImageReplacer {
         if (!original.startsWith('/')) {
             prefix = '/posts/' + this.pageName + '/'
         }
-        console.log('orig = ' + original + ' new url: ' + (RAW_URL_PREFIX + CONTENT_REPO + prefix + original));
         element.setAttribute('src', RAW_URL_PREFIX + CONTENT_REPO + prefix + original)
     }
 }

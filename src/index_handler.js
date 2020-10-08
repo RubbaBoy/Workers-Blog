@@ -1,8 +1,17 @@
 const {ContentReplacer} = require('./rewrite_helper');
-const {RAW_URL_PREFIX, TEMPLATE_REPO, CONTENT_REPO} = require('./constants')
+const parser = require('./content_parser')
+const {API_REPOS, RAW_URL_PREFIX, TEMPLATE_REPO, CONTENT_REPO, CONTENT_RAW_REPO} = require('./constants')
 
 module.exports = {
     handleIndex: handleIndex
+}
+
+const fetchOptions = {
+    method: 'GET',
+    headers: {
+        'User-Agent': 'Cloudflare Workers Blog',
+        'Access-Control-Allow-Origin': '*'
+    },
 }
 
 async function handleIndex(url /*: URL */) {
@@ -11,37 +20,39 @@ async function handleIndex(url /*: URL */) {
     }
 
     let template = ''
-
     let pageTemplate = await (await fetch(`${RAW_URL_PREFIX}${TEMPLATE_REPO}/index.html`)).text()
 
     await (new StringRewriter(pageTemplate)
-        .on('.foo', new TemplateFinder(tem => template = tem)))
+        .on('.preview-container .row span', new TemplateFinder(tem => template = tem)))
         .transform()
 
-    let posts = [
-        {
-            title: 'Some title',
-            date: '10/8/2020',
-            content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam sit amet auctor tellus. Maecenas vel libero ipsum. Cras vitae molestie arcu. Suspendisse potenti. Sed dictum quam vel nisl egestas, sit amet volutpat purus aliquet. Donec cursus sagittis sapien sit amet sollicitudin. Nam et velit id nulla pellentesque feugiat. Nulla facilisi. Curabitur hendrerit lectus ut mi luctus dignissim.'
-        },
-        {
-            title: 'Another one',
-            date: '10/1/2020',
-            content: 'Maecenas mattis neque ac sodales commodo. Vivamus commodo massa vel purus pulvinar, sed mollis magna facilisis. Sed imperdiet ultricies iaculis. Suspendisse nec ultricies tortor, non gravida nisi. In nunc orci, viverra sit amet fermentum sed, laoreet at odio. Cras at vestibulum ex, sit amet mattis velit. In ullamcorper rutrum tortor. Quisque hendrerit eu elit vitae eleifend.'
-        },
-        {
-            title: 'More stuff',
-            date: '9/28/2020',
-            content: 'Pellentesque ultrices lacus tortor, eu semper mauris imperdiet sed. Nullam pretium commodo purus, eu posuere nisl. Aliquam imperdiet gravida neque, et aliquet odio. Sed non sapien non sem hendrerit accumsan. Maecenas et felis urna. Praesent facilisis nunc nec venenatis faucibus. Donec quis lobortis libero. Donec vitae sollicitudin risus, nec venenatis est. Sed euismod est in sodales molestie.'
-        },
-    ]
+    let posts = []
+
+    let listing = await (await fetch(`${API_REPOS}${CONTENT_RAW_REPO}/contents/posts`, fetchOptions)).json()
+
+    for (const list of listing) {
+        let name = list.name
+        if (name.includes('.')) {
+            continue
+        }
+
+        let parsed = parser.parseContent(await (await fetch(`${RAW_URL_PREFIX}${CONTENT_REPO}/posts/${name}/${name}.md`,
+            fetchOptions)).text(), {contentUntil: '[//]: <> "End preview"'})
+
+        posts.push({
+            title: parsed.title,
+            date: parsed.date,
+            content: parsed.html
+        })
+    }
 
     let postHTML = ''
     for (const post of posts) {
         postHTML += await (new StringRewriter(template)
-                .on('.post-title', new ContentReplacer(post.title))
-                .on('.post-date', new ContentReplacer(post.date))
-                .on('.post-content', new ContentReplacer(post.content))).transform()
+            .on('.post-title', new ContentReplacer(post.title))
+            .on('.post-date', new ContentReplacer(post.date))
+            .on('.post-content', new ContentReplacer(post.content, true)))
+            .transform()
     }
 
     let newHTML = await (new StringRewriter(pageTemplate)
