@@ -11,7 +11,7 @@ class ParsedContent {
 }
 
 // If contentUntil is null, it parses all content. If not, it parses until the given string.
-function parsedContent(markdown /*: string */, {contentUntil /*: string */ = null, trimContent = true}) /*: ParsedContent */ {
+function parsedContent(markdown /*: string */, contentUntil /*: string */ = null, trimContent = true) /*: ParsedContent */ {
     let headerEndIndex = markdown.indexOf('```', 3)
     let header = markdown.substring(4, headerEndIndex)
 

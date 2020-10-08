@@ -1,38 +1,12 @@
-const {RAW_URL_PREFIX, CONTENT_REPO} = require('./constants')
+const {RAW_URL_PREFIX, TEMPLATE_REPO, CONTENT_REPO} = require('./constants')
 const parser = require('./content_parser')
-const {ContentReplacer} = require('./rewrite_helper');
+const {ContentReplacer, ImageReplacer, TagsHandler} = require('./rewrite_helper');
 
 module.exports = {
     handlePage: handlePage
 }
 
-class ImageReplacer {
-    constructor(pageName) {
-        this.pageName = pageName
-    }
-
-    element(element) {
-        let original = element.getAttribute('src')
-        let prefix = ''
-        if (!original.startsWith('/')) {
-            prefix = '/posts/' + this.pageName + '/'
-        }
-        element.setAttribute('src', RAW_URL_PREFIX + CONTENT_REPO + prefix + original)
-    }
-}
-
-class TagsHandler {
-    constructor(tags) {
-        this.tags = tags
-    }
-
-    element(element) {
-        let tagHTML = element.getAttribute('tag')
-        element.setInnerContent(this.tags.map(tag => tagHTML.replace('#', '/tag/' + tag).replace('%', tag)).join('\n'), {html: true})
-    }
-}
-
-async function handlePage(url /*: URL */) {
+async function handlePage(event /*: FetchEvent */, url /*: URL */) {
     if (!url.pathname.startsWith('/post/')) {
         return null;
     }

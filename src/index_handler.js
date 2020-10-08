@@ -1,4 +1,5 @@
-const {ContentReplacer} = require('./rewrite_helper');
+const {ContentReplacer, TagsHandler, StringRewriter} = require('./rewrite_helper');
+const {CacheManager} = require('./cache_manager');
 const parser = require('./content_parser')
 const {API_REPOS, RAW_URL_PREFIX, TEMPLATE_REPO, CONTENT_REPO, CONTENT_RAW_REPO} = require('./constants')
 
@@ -14,22 +15,28 @@ const fetchOptions = {
     },
 }
 
-async function handleIndex(url /*: URL */) {
+async function handleIndex(event /*: FetchEvent */, url /*: URL */) {
     if (url.pathname !== '/') {
         return null;
     }
 
+    return new CacheManager(event)
+        .cache((_) => handleIndexUncached())
+}
+
+async function handleIndexUncached() {
     let template = ''
     let pageTemplate = await (await fetch(`${RAW_URL_PREFIX}${TEMPLATE_REPO}/index.html`)).text()
 
     await (new StringRewriter(pageTemplate)
-        .on('.preview-container .row span', new TemplateFinder(tem => template = tem)))
+        .on('.preview-container .row span', new TemplateFinder(found =>
+            template = found
+                .replaceAll(/(?<!\\)'/g, '"')
+                .replaceAll('\\\'', '\''))))
         .transform()
 
     let posts = []
-
     let listing = await (await fetch(`${API_REPOS}${CONTENT_RAW_REPO}/contents/posts`, fetchOptions)).json()
-
     for (const list of listing) {
         let name = list.name
         if (name.includes('.')) {
@@ -37,12 +44,13 @@ async function handleIndex(url /*: URL */) {
         }
 
         let parsed = parser.parseContent(await (await fetch(`${RAW_URL_PREFIX}${CONTENT_REPO}/posts/${name}/${name}.md`,
-            fetchOptions)).text(), {contentUntil: '[//]: <> "End preview"'})
+            fetchOptions)).text(), '[//]: <> "End preview"')
 
         posts.push({
             title: parsed.title,
             date: parsed.date,
-            content: parsed.html
+            content: parsed.html,
+            tags: parsed.tags
         })
     }
 
@@ -52,6 +60,7 @@ async function handleIndex(url /*: URL */) {
             .on('.post-title', new ContentReplacer(post.title))
             .on('.post-date', new ContentReplacer(post.date))
             .on('.post-content', new ContentReplacer(post.content, true)))
+            .on('.tags', new TagsHandler(post.tags))
             .transform()
     }
 
@@ -69,21 +78,5 @@ class TemplateFinder {
 
     element(el) {
         this.callback(el.getAttribute('template'))
-    }
-}
-
-class StringRewriter {
-    constructor(html) {
-        this.html = html
-        this.rewriter = new HTMLRewriter()
-    }
-
-    on(selector, handler) /*: StringRewriter */ {
-        this.rewriter = this.rewriter.on(selector, handler)
-        return this
-    }
-
-    async transform() /*: string */ {
-        return await this.rewriter.transform(new Response(this.html)).text()
     }
 }
