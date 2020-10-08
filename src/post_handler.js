@@ -1,19 +1,9 @@
-const constants = require('./constants')
+const {RAW_URL_PREFIX, CONTENT_REPO} = require('./constants')
 const parser = require('./content_parser')
+const {ContentReplacer} = require('./rewrite_helper');
 
 module.exports = {
     handlePage: handlePage
-}
-
-class ContentReplacer {
-    constructor(content, isHTML = false) {
-        this.content = content
-        this.isHTML = isHTML
-    }
-
-    element(el) {
-        el.setInnerContent(this.content, {html: this.isHTML})
-    }
 }
 
 class ImageReplacer {
@@ -27,8 +17,8 @@ class ImageReplacer {
         if (!original.startsWith('/')) {
             prefix = '/posts/' + this.pageName + '/'
         }
-        console.log('orig = ' + original + ' new url: ' + (constants.RAW_URL_PREFIX + constants.CONTENT_REPO + prefix + original));
-        element.setAttribute('src', constants.RAW_URL_PREFIX + constants.CONTENT_REPO + prefix + original)
+        console.log('orig = ' + original + ' new url: ' + (RAW_URL_PREFIX + CONTENT_REPO + prefix + original));
+        element.setAttribute('src', RAW_URL_PREFIX + CONTENT_REPO + prefix + original)
     }
 }
 
@@ -50,8 +40,8 @@ async function handlePage(url /*: URL */) {
 
     let post = url.pathname.substr(6)
 
-    let pageContent = await fetch(`${constants.RAW_URL_PREFIX}${constants.CONTENT_REPO}/posts/${post}/${post}.md`)
-    let pageTemplate = await fetch(`${constants.RAW_URL_PREFIX}${constants.TEMPLATE_REPO}/post.html`)
+    let pageContent = await fetch(`${RAW_URL_PREFIX}${CONTENT_REPO}/posts/${post}/${post}.md`)
+    let pageTemplate = await fetch(`${RAW_URL_PREFIX}${TEMPLATE_REPO}/post.html`)
 
     let parsed = parser.parseContent(await pageContent.text())
 

@@ -1,4 +1,4 @@
-const constants = require('./src/constants')
+const {RAW_URL_PREFIX, TEMPLATE_REPO} = require('./src/constants')
 const postHandler = require('./src/post_handler')
 const indexHandler = require('./src/index_handler')
 
@@ -19,7 +19,7 @@ async function handleRequest(request) {
 
 async function handleRedirect(request /*: Request */, url /*: URL */) {
     let extension = getExtension(url)
-    const redirectUrl = constants.RAW_URL_PREFIX + constants.TEMPLATE_REPO + url.pathname
+    const redirectUrl = RAW_URL_PREFIX + TEMPLATE_REPO + url.pathname
     request = new Request(request)
 
     if (contentTypes.hasOwnProperty(extension)) {
