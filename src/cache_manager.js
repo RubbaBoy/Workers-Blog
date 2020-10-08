@@ -12,13 +12,10 @@ class CacheManager {
         let response = await cache.match(cacheKey)
 
         if (!response) {
-            console.log('Uncached!');
             response = await uncachedResponse(new URL(request.url))
             response = new Response(response.body, response)
             response.headers.append("Cache-Control", `max-age=${cacheTime}`)
             this.event.waitUntil(cache.put(cacheKey, response.clone()))
-        } else {
-            console.log('Cached!');
         }
 
         return response

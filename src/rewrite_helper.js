@@ -3,7 +3,9 @@ const {RAW_URL_PREFIX, CONTENT_REPO} = require('./constants')
 module.exports = {
     ContentReplacer: ContentReplacer,
     ImageReplacer: ImageReplacer,
-    TagsHandler: TagsHandler
+    TagsHandler: TagsHandler,
+    LinkRewriter: LinkRewriter,
+    StringRewriter: StringRewriter,
 }
 
 class ContentReplacer {
@@ -12,8 +14,8 @@ class ContentReplacer {
         this.isHTML = isHTML
     }
 
-    element(el) {
-        el.setInnerContent(this.content, {html: this.isHTML})
+    element(element) {
+        element.setInnerContent(this.content, {html: this.isHTML})
     }
 }
 
@@ -40,6 +42,16 @@ class TagsHandler {
     element(element) {
         let tagHTML = element.getAttribute('tag')
         element.setInnerContent(this.tags.map(tag => tagHTML.replace('#', '/tag/' + tag).replace('%', tag)).join('\n'), {html: true})
+    }
+}
+
+class LinkRewriter {
+    constructor(href) {
+        this.href = href
+    }
+
+    element(element) {
+        element.setAttribute('href', this.href)
     }
 }
 

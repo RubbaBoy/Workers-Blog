@@ -1,4 +1,4 @@
-const {ContentReplacer, TagsHandler, StringRewriter} = require('./rewrite_helper');
+const {ContentReplacer, TagsHandler, LinkRewriter, StringRewriter} = require('./rewrite_helper');
 const {CacheManager} = require('./cache_manager');
 const parser = require('./content_parser')
 const {API_REPOS, RAW_URL_PREFIX, TEMPLATE_REPO, CONTENT_REPO, CONTENT_RAW_REPO} = require('./constants')
@@ -47,6 +47,7 @@ async function handleIndexUncached() {
             fetchOptions)).text(), '[//]: <> "End preview"')
 
         posts.push({
+            name: name,
             title: parsed.title,
             date: parsed.date,
             content: parsed.html,
@@ -61,6 +62,7 @@ async function handleIndexUncached() {
             .on('.post-date', new ContentReplacer(post.date))
             .on('.post-content', new ContentReplacer(post.content, true)))
             .on('.tags', new TagsHandler(post.tags))
+            .on('.read-more', new LinkRewriter('/post/' + post.name))
             .transform()
     }
 
